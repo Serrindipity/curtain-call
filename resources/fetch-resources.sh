@@ -41,6 +41,7 @@ _get() {
 # --- operator binaries (run on your box) -----------------------------------
 step "operator binaries -> $BIN"
 _get "$BIN/nuclei" fetch_gh_zip_member projectdiscovery/nuclei 'nuclei_[0-9.]+_linux_amd64\.zip$' nuclei "$BIN/nuclei"
+_get "$BIN/kerbrute" fetch_ghlatest ropnop/kerbrute kerbrute_linux_amd64 "$BIN/kerbrute"
 _get "$BIN/chisel" fetch_gh_gz jpillora/chisel 'chisel_[0-9.]+_linux_amd64\.gz$' "$BIN/chisel"
 _get "$BIN/ligolo-proxy" fetch_gh_tar_member nicocha30/ligolo-ng 'ligolo-ng_proxy_.*_linux_amd64\.tar\.gz$' proxy "$BIN/ligolo-proxy"
 chmod +x "$BIN"/* 2>/dev/null || true

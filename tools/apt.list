@@ -19,6 +19,7 @@ nano
 # recon / web
 nmap
 masscan
+rustscan
 dnsutils
 whatweb
 gobuster
