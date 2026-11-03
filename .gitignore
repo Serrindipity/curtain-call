@@ -1,18 +1,3 @@
-# Working arsenal dirs are populated by resources/fetch-resources.sh (online) or
-# unpacked from vendor/ (offline). Don't commit the loose files — the vendored
-# snapshot (vendor/arsenal.tgz, tracked below) is how the arsenal rides into the
-# air-gapped box via git.
-resources/bin/*
-resources/linux/*
-resources/windows/*
-resources/webshells/*
-resources/data/*
-!resources/**/.gitkeep
-
-# ...but DO track the vendored snapshot the competition box clones.
-!vendor/
-!vendor/arsenal.tgz
-
 # backups the installer makes
 *.curtain-call.bak
 
@@ -23,3 +8,5 @@ claude-notes/
 *.claude.md
 .DS_Store
 
+# local-only study guide (git add -f if you ever want to share it)
+docs/PLAYBOOK.md

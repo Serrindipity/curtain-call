@@ -1,15 +1,11 @@
 #!/usr/bin/env bash
-# Install the OPERATOR toolkit onto Kali: apt packages, pipx tools, and a few
-# tunneling binaries Kali ships stale or not at all. Idempotent; re-runnable.
-# Run BEFORE the competition (needs internet). This is the stuff that runs on
-# YOUR box; target-droppable binaries live in ../resources (fetch-resources.sh).
+# Install the OPERATOR toolkit onto Kali: apt packages + pipx tools.
+# Idempotent; re-runnable. Needs internet.
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$HERE/.." && pwd)"
 # shellcheck source=../lib/common.sh
 source "$ROOT/lib/common.sh"
-# shellcheck source=../lib/fetch.sh
-source "$ROOT/lib/fetch.sh"
 
 is_debian || die "This installs Kali/Debian packages; run it on your Kali box."
 LOCAL_BIN="$HOME/.local/bin"; mkdir -p "$LOCAL_BIN"
@@ -49,6 +45,5 @@ else
 fi
 
 step "done"
-info "operator binaries (nuclei/chisel/ligolo-proxy) + datasets: ./install.sh --resources"
 info "on-box day-0 (once): systemctl start postgresql && msfdb init ; nmap --script-updatedb"
 have fzf || warn "fzf missing — Ctrl-R fuzzy history will fall back to substring search"

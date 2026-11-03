@@ -2,32 +2,15 @@
 
 Bootstrap a bare-metal Kali box toward an Exegol-like setup.
 
-## Quickstart — internet
+## Quickstart
 
 ```bash
 git clone <repo> ~/curtain-call && cd ~/curtain-call
-./install.sh               # shell + history + tools
-./install.sh --resources   # fetch the arsenal
+./install.sh      # shell + history + tools
 exec zsh
 ```
 
-## Quickstart — no internet
-
-```bash
-# on a machine WITH internet:
-./build-vendor.sh                                      # -> vendor/arsenal.tgz
-git add vendor/arsenal.tgz && git commit -m vendor && git push
-
-# on the box:
-git clone <repo> ~/curtain-call && cd ~/curtain-call
-./install.sh --shell --history --offline              # extracts vendor/arsenal.tgz
-exec zsh
-# day-0, once:
-sudo systemctl start postgresql && sudo msfdb init
-sudo cp -r resources/data/vulscan /usr/share/nmap/scripts/ && sudo nmap --script-updatedb
-```
-
-`install.sh [--shell|--history|--tools|--resources|--offline|--all]` — idempotent.
+`install.sh [--shell|--history|--tools|--all]` — idempotent.
 
 ## Features
 
@@ -35,7 +18,6 @@ sudo cp -r resources/data/vulscan /usr/share/nmap/scripts/ && sudo nmap --script
 - `target <ip> [names]` — set `$IP`/`$TARGET` + `/etc/hosts`
 - `lhost` — set `$LHOST` from tun0
 - `nmapx <name> …` — scan into `./scans/<name>.xml` (import into kiss ScanViewer)
-- `www` — serve `resources/` over HTTP; `nuclei-int`, `onerule`, `kev` aliases
 
 ### Always-on logging
 - every tmux pane logged to `~/.curtain-call/logs/` (ANSI-stripped)
@@ -46,9 +28,16 @@ sudo cp -r resources/data/vulscan /usr/share/nmap/scripts/ && sudo nmap --script
 - parameterized by `$IP`/`$DOMAIN`/`$LHOST`/`$SUBNET`
 
 ### Tools
-
-- **apt:** nmap, masscan, rustscan, whatweb, gobuster, feroxbuster, ffuf, nikto, netexec, smbclient, smbmap, ldap-utils, krb5-user, impacket-scripts, evil-winrm, responder, bloodhound, hashcat, john, hydra, exploitdb, metasploit-framework, seclists, proxychains4
+- **apt:** nmap, masscan, rustscan, nuclei, whatweb, gobuster, feroxbuster, ffuf, nikto, netexec, smbclient, smbmap, ldap-utils, krb5-user, impacket-scripts, evil-winrm, responder, bloodhound, hashcat, john, hydra, exploitdb, metasploit-framework, seclists, proxychains4
 - **pipx:** certipy-ad, bloodyAD, coercer, mitm6, ldapdomaindump
-- **binaries:** nuclei, kerbrute, chisel, ligolo-proxy
-- **drops** (`resources/`, served via `www`): linpeas, pspy, lse, les, deepce, ncat, ligolo-agent, winPEAS, PrintSpoofer, GodPotato, PrivescCheck, PowerView, PowerUp, mimikatz, SharpHound, p0wny-shell
-- **datasets:** nuclei-templates (curated), vulscan, OneRuleToRuleThemAll, bloodhound customqueries, CISA KEV
+
+## offline-arsenal branch
+
+For a competition with no internet: the `offline-arsenal` branch adds drop-on-target
+binaries/scripts (linpeas, pspy, winPEAS, PrintSpoofer/GodPotato, chisel, ligolo,
+kerbrute, nuclei + curated templates, vulscan, OneRule, …) that vendor into the repo
+and install with `./install.sh --offline`.
+
+```bash
+git checkout offline-arsenal
+```

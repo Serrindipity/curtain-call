@@ -20,6 +20,7 @@ nano
 nmap
 masscan
 rustscan
+nuclei
 dnsutils
 whatweb
 gobuster

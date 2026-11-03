@@ -86,7 +86,6 @@ alias ports='ss -tulpn'
 alias tun='echo "LHOST=$LHOST"; ip -br -c addr show tun0 2>/dev/null'
 alias serve='python3 -m http.server 80'          # run from where your loot is
 alias serve8='python3 -m http.server 8000'
-alias www='cd "$CC_HOME/resources" && python3 -m http.server 80'   # serve the arsenal
 alias logs='cc-logs'
 alias b64d='base64 -d'
 
@@ -100,8 +99,3 @@ nmapx() {
     nmap "$@" -oA "scans/$name"
     echo "-> scans/$name.xml  (kiss: ScanViewer -> import nmap XML)"
 }
-
-# --- arsenal datasets (populated by install.sh --resources/--offline) -------
-alias nuclei-int='nuclei -duc -t "$CC_HOME/resources/data/nuclei-templates"'   # offline internal sweep: nuclei-int -l targets.txt
-alias onerule='echo "$CC_HOME/resources/data/rules/OneRuleToRuleThemAll.rule"'  # $(onerule) in a hashcat -r
-alias kev='jq -r ".vulnerabilities[] | [.cveID,.vendorProject,.product,.vulnerabilityName] | @tsv" "$CC_HOME/resources/data/cve/kev.json"'
