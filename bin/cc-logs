@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Small convenience for the always-on tmux logs.
+#   cc-logs            list today's logs, newest last
+#   cc-logs ls [DATE]  list logs for a date (YYYYMMDD; default today)
+#   cc-logs tail       follow the most recently written log
+#   cc-logs grep PAT   search all logs for PAT (ripgrep if present)
+#   cc-logs dir        print the log directory
+set -euo pipefail
+logdir="${CC_LOGDIR:-$HOME/.curtain-call/logs}"
+
+cmd="${1:-ls}"; shift || true
+case "$cmd" in
+  dir)  echo "$logdir" ;;
+  ls)   date="${1:-$(date +%Y%m%d)}"; ls -lrt "$logdir"/"${date}"_* 2>/dev/null || echo "no logs for ${date} in $logdir" ;;
+  tail) f="$(ls -t "$logdir"/*.log 2>/dev/null | head -1)"; [ -n "${f:-}" ] || { echo "no logs yet"; exit 0; }; echo ">> $f"; exec tail -f "$f" ;;
+  grep) pat="${1:?usage: cc-logs grep PATTERN}"
+        if command -v rg >/dev/null 2>&1; then exec rg -n --no-heading "$pat" "$logdir"/*.log
+        else exec grep -rniE "$pat" "$logdir"/*.log; fi ;;
+  *)    echo "usage: cc-logs [ls [DATE]|tail|grep PATTERN|dir]" >&2; exit 2 ;;
+esac

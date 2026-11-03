@@ -1,0 +1,17 @@
+# Downloaded arsenal binaries/scripts are fetched by resources/fetch-resources.sh;
+# don't commit them to the team repo (large, and they go stale).
+resources/linux/*
+resources/windows/*
+resources/webshells/*
+!resources/**/.gitkeep
+
+# backups the installer makes
+*.curtain-call.bak
+
+# No AI/assistant notes or identifying metadata in the repo (competition rules)
+.claude/
+CLAUDE.md
+claude-notes/
+*.claude.md
+.DS_Store
+

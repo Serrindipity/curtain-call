@@ -1,0 +1,49 @@
+# Operator tools to ensure via apt. One package per line; '#' comments ignored.
+# Most are already present on a full Kali install — `apt install` is idempotent,
+# so listing them just guarantees a lighter image (kali-linux-headless, WSL,
+# a fresh VM) has them. Trim anything you don't want.
+
+# shell / workflow (these back the curtain-call shell layer)
+zsh
+tmux
+fzf
+ripgrep
+fd-find
+jq
+rlwrap
+curl
+wget
+git
+nano
+
+# recon / web
+nmap
+masscan
+dnsutils
+whatweb
+gobuster
+feroxbuster
+ffuf
+nikto
+
+# smb / ad / directory
+smbclient
+smbmap
+ldap-utils
+krb5-user
+netexec
+impacket-scripts
+evil-winrm
+responder
+bloodhound
+
+# cracking
+hashcat
+john
+hydra
+
+# pivoting / misc
+proxychains4
+seclists
+python3-pip
+pipx

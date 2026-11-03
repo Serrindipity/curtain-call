@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# Receives a tmux pane's raw output on stdin and appends it to a per-pane log,
+# stripping ANSI colour/cursor sequences and carriage returns so the file is
+# readable as report evidence. Invoked by tmux pipe-pane (see shell/tmux.conf).
+#
+# args: <session> <window> <pane>   (all optional, used only to name the file)
+set -u
+
+logdir="${CC_LOGDIR:-$HOME/.curtain-call/logs}"
+mkdir -p "$logdir" 2>/dev/null || exit 0
+
+sess="${1:-sess}"; win="${2:-0}"; pane="${3:-0}"
+# One file per pane per day; appends across reattaches.
+file="$logdir/$(date +%Y%m%d)_${sess}_w${win}p${pane}.log"
+
+# Mark session boundaries so a day's file stays legible.
+printf '\n===== pipe opened %s =====\n' "$(date '+%Y-%m-%d %H:%M:%S %z')" >> "$file"
+
+# -u: unbuffered, so the log tracks the pane in real time.
+# Strip CSI (ESC [ ... letter) and OSC (ESC ] ... BEL) sequences, and lone CRs.
+exec sed -u \
+  -e 's/\x1b\[[0-9;:?]*[ -/]*[@-~]//g' \
+  -e 's/\x1b\][^\x07]*\x07//g' \
+  -e 's/\x1b[()][B0]//g' \
+  -e 's/\r$//' \
+  >> "$file"

@@ -1,0 +1,38 @@
+# curtain-call tmux config (template).
+# install.sh renders @CC_HOME@ / @CC_LOGDIR@ to ~/.curtain-call/tmux.conf and
+# sources that from ~/.tmux.conf. Edit this file, then re-run ./install.sh --shell.
+
+# --- always-on logging -----------------------------------------------------
+# Every pane is piped to a per-day, per-pane file under @CC_LOGDIR@ as soon as
+# it is created. `-o` makes it a no-op if the pane is already being logged, so
+# the hooks are safe to fire repeatedly. Prefix+P toggles logging for one pane.
+CC_LOGGER="@CC_HOME@/bin/cc-log-filter"
+
+set-hook -g session-created   'pipe-pane -o "exec #{CC_LOGGER} #{session_name} #{window_index} #{pane_index}"'
+set-hook -g after-new-session 'pipe-pane -o "exec #{CC_LOGGER} #{session_name} #{window_index} #{pane_index}"'
+set-hook -g after-new-window  'pipe-pane -o "exec #{CC_LOGGER} #{session_name} #{window_index} #{pane_index}"'
+set-hook -g after-split-window 'pipe-pane -o "exec #{CC_LOGGER} #{session_name} #{window_index} #{pane_index}"'
+
+# tmux expands #{CC_LOGGER} from its environment; set it there too.
+set-environment -g CC_LOGGER "@CC_HOME@/bin/cc-log-filter"
+set-environment -g CC_LOGDIR "@CC_LOGDIR@"
+
+# Manual toggle for the current pane.
+bind P pipe-pane -o "exec @CC_HOME@/bin/cc-log-filter #{session_name} #{window_index} #{pane_index}" \; display "logging toggled -> @CC_LOGDIR@"
+
+# Start logging for panes that already exist when this config is (re)sourced.
+run-shell 'tmux pipe-pane -o "exec @CC_HOME@/bin/cc-log-filter #{session_name} #{window_index} #{pane_index}"'
+
+# --- status bar: target IP + your tun0 IP + clock (from your .exegol setup) -
+# `target <ip> ...` writes ~/.tmux-target-ip; this shows it live. Prefix+t edits it.
+set -g status-right-length 80
+set -g status-right "#[fg=colour235,bg=default]#[fg=colour250,bg=colour235] 🎯 #(cat ~/.tmux-target-ip 2>/dev/null || echo '-') | 💻 #(ip -4 addr show tun0 2>/dev/null | awk '/inet /{print $2}' | cut -d/ -f1) #[fg=colour235,bg=default]#[default] %H:%M %d.%m "
+bind t display-popup -E 'nano ~/.tmux-target-ip'
+
+# --- quality-of-life (kept minimal; does not fight your own ~/.tmux.conf) ---
+set -g history-limit 100000
+set -g mouse on
+set -g base-index 1
+setw -g pane-base-index 1
+set -g display-time 2000
+setw -g mode-keys vi

@@ -1,0 +1,10 @@
+# Python operator tools via pipx (isolated venvs, newer than Kali's apt).
+# One pipx spec per line; '#' comments ignored. Package name or VCS URL.
+
+certipy-ad
+bloodyAD
+coercer
+mitm6
+ldapdomaindump
+# NetExec newer than apt (uncomment to track upstream; large):
+# git+https://github.com/Pennyw0rth/NetExec
