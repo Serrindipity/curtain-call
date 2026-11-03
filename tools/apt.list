@@ -42,6 +42,12 @@ hashcat
 john
 hydra
 
+# exploitation / offline DBs (present on full Kali; listed for lean images)
+exploitdb
+wordlists
+metasploit-framework
+unzip
+
 # pivoting / misc
 proxychains4
 seclists

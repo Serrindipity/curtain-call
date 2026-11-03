@@ -52,6 +52,21 @@ fetch_gh_gz() {
   return 1
 }
 
+# Fetch a .zip release asset and extract one member to dest (needs unzip).
+fetch_gh_zip_member() {
+  local repo="$1" pattern="$2" member="$3" dest="$4" tmp dir
+  have unzip || { warn "unzip not installed; cannot extract $member from $repo"; return 1; }
+  tmp="$(mktemp).zip"; dir="$(mktemp -d)"
+  if fetch_gh_asset_match "$repo" "$pattern" "$tmp"; then
+    unzip -oq "$tmp" -d "$dir" 2>/dev/null
+    local found; found="$(find "$dir" -type f -name "$member" | head -1)"
+    [ -n "$found" ] || { warn "$member not in $repo zip"; rm -rf "$tmp" "$dir"; return 1; }
+    mkdir -p "$(dirname "$dest")"; cp "$found" "$dest"; chmod +x "$dest"
+    ok "extracted $(basename "$dest")"; rm -rf "$tmp" "$dir"; return 0
+  fi
+  rm -rf "$tmp" "$dir"; return 1
+}
+
 # Fetch a .tar.gz release asset and extract one member to dest.
 fetch_gh_tar_member() {
   local repo="$1" pattern="$2" member="$3" dest="$4" tmp dir

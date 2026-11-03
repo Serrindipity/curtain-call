@@ -8,7 +8,8 @@
 #   ./install.sh --shell         # zsh/tmux config + logging only
 #   ./install.sh --history       # (re)seed the Ctrl-R history corpus
 #   ./install.sh --tools         # apt + pipx + tunneling binaries
-#   ./install.sh --resources     # download the offline drop-on-target arsenal
+#   ./install.sh --resources     # download the arsenal from the internet
+#   ./install.sh --offline       # extract the vendored arsenal (vendor/*.tgz) — no internet
 #   ./install.sh --all           # everything, including --resources
 set -uo pipefail
 CC_HOME="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -19,13 +20,14 @@ CC_STATE="$HOME/.curtain-call"
 CC_LOGDIR="$CC_STATE/logs"
 HISTFILE="${HISTFILE:-$HOME/.zsh_history}"
 
-do_shell=0 do_hist=0 do_tools=0 do_res=0
+do_shell=0 do_hist=0 do_tools=0 do_res=0 do_offline=0
 if [ "$#" -eq 0 ]; then do_shell=1 do_hist=1 do_tools=1; fi
 for a in "$@"; do case "$a" in
   --shell) do_shell=1 ;;
   --history) do_hist=1 ;;
   --tools) do_tools=1 ;;
   --resources) do_res=1 ;;
+  --offline) do_offline=1 ;;
   --all) do_shell=1 do_hist=1 do_tools=1 do_res=1 ;;
   -h|--help) grep -E '^#( |$)' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
   *) die "unknown option: $a (try --help)" ;;
@@ -87,13 +89,43 @@ if [ "$do_tools" -eq 1 ]; then
   bash "$CC_HOME/tools/install-tools.sh"
 fi
 
-# --- offline arsenal -------------------------------------------------------
+# link operator binaries (nuclei/chisel/ligolo-proxy) onto PATH.
+link_operator_bins() {
+  local b="$CC_HOME/resources/bin"
+  [ -d "$b" ] || return 0
+  mkdir -p "$HOME/.local/bin"
+  local f n
+  for f in "$b"/*; do
+    [ -f "$f" ] || continue; n="$(basename "$f")"; chmod +x "$f" 2>/dev/null
+    ln -sf "$f" "$HOME/.local/bin/$n" && ok "linked $n -> ~/.local/bin"
+  done
+}
+
+# --- arsenal: download (online) --------------------------------------------
 if [ "$do_res" -eq 1 ]; then
-  step "offline drop-on-target arsenal"
+  step "fetch arsenal from the internet"
   bash "$CC_HOME/resources/fetch-resources.sh"
+  link_operator_bins
+fi
+
+# --- arsenal: extract vendored snapshot (offline) --------------------------
+if [ "$do_offline" -eq 1 ]; then
+  step "extract vendored arsenal (offline)"
+  shopt -s nullglob
+  tars=("$CC_HOME"/vendor/*.tgz "$CC_HOME"/vendor/*.tar.gz)
+  if [ "${#tars[@]}" -eq 0 ]; then
+    warn "no vendor/*.tgz found — build one on an internet box with ./build-vendor.sh"
+  else
+    for t in "${tars[@]}"; do
+      info "extracting $(basename "$t")"
+      tar -xzf "$t" -C "$CC_HOME" && ok "extracted into resources/"
+    done
+    link_operator_bins
+  fi
 fi
 
 step "curtain-call ready"
 echo "  new shell  -> Ctrl-R (fuzzy history), 'target <ip> [names]', 'lhost'"
 echo "  logs       -> every tmux pane auto-logs to $CC_LOGDIR  (cc-logs tail)"
-echo "  arsenal    -> ./install.sh --resources, then 'www' to serve it"
+echo "  arsenal    -> online: ./install.sh --resources  |  offline: ./install.sh --offline"
+echo "  serve/scan -> 'www' serves drops ; 'nmapx <name> <args>' scans into ./scans (kiss-importable XML)"

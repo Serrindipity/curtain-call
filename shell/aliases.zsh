@@ -89,3 +89,19 @@ alias serve8='python3 -m http.server 8000'
 alias www='cd "$CC_HOME/resources" && python3 -m http.server 80'   # serve the arsenal
 alias logs='cc-logs'
 alias b64d='base64 -d'
+
+# --- kiss handoff: scans as importable nmap XML ----------------------------
+# nmapx <name> <nmap args...>  -> writes ./scans/<name>.{nmap,gnmap,xml}
+# The .xml imports straight into the kiss dashboard (ScanViewer -> import).
+nmapx() {
+    [ -n "${1:-}" ] || { echo "usage: nmapx <name> <nmap args...>   (add sudo-only flags via: nmapx <name> -sS ... with sudo)"; return 1; }
+    local name="$1"; shift
+    mkdir -p scans
+    nmap "$@" -oA "scans/$name"
+    echo "-> scans/$name.xml  (kiss: ScanViewer -> import nmap XML)"
+}
+
+# --- arsenal datasets (populated by install.sh --resources/--offline) -------
+alias nuclei-int='nuclei -duc -t "$CC_HOME/resources/data/nuclei-templates"'   # offline internal sweep: nuclei-int -l targets.txt
+alias onerule='echo "$CC_HOME/resources/data/rules/OneRuleToRuleThemAll.rule"'  # $(onerule) in a hashcat -r
+alias kev='jq -r ".vulnerabilities[] | [.cveID,.vendorProject,.product,.vulnerabilityName] | @tsv" "$CC_HOME/resources/data/cve/kev.json"'
